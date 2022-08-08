@@ -87,6 +87,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0528485A289741B100D5BE43 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				0528485B289741C900D5BE43 /* Fonts */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		0528485B289741C900D5BE43 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Fonts;
+			sourceTree = "<group>";
+		};
 		C601505728801933002C4B07 /* Views */ = {
 			isa = PBXGroup;
 			children = (
@@ -114,6 +129,7 @@
 		C6B25A0D287BFF690047DCA7 /* NetworkLayer */ = {
 			isa = PBXGroup;
 			children = (
+				0528485A289741B100D5BE43 /* Resources */,
 				C6B25A46287D4B900047DCA7 /* Reusables */,
 				C6B25A2D287C0B0F0047DCA7 /* Utils */,
 				C6B25A32287C1CD80047DCA7 /* MarketView */,

@@ -7,13 +7,26 @@
 
 import SwiftUI
 import Charts
+import Kingfisher
 
 internal typealias ChartElement = (id: String, timestamp: TimeInterval, value: Double)
+
+internal enum Timeframe: String, CaseIterable {
+    case hour = "1h"
+    case day = "1d"
+    case day3 = "3d"
+    case day7 = "7d"
+    case month = "1m"
+    case halfYear = "6m"
+    case year = "1y"
+}
 
 struct CoinTopView: View {
     @State var coin: CoinInfo
     @State var charts: [ChartElement] = []
     @State var selectedElement: ChartElement?
+    
+    @State var selectedTimeframe: Timeframe = .day
     
     var chart: some View {
         Chart(charts, id: \.id) { element in
@@ -21,7 +34,7 @@ struct CoinTopView: View {
                 x: .value("Date", element.timestamp),
                 y: .value("Value", element.value)
             )
-            .foregroundStyle(chartColor())
+            .foregroundStyle(coinPriceToColor())
             .interpolationMethod(.catmullRom)
             
             AreaMark(
@@ -39,13 +52,14 @@ struct CoinTopView: View {
                     x: .value("Date", element.timestamp),
                     y: .value("Value", element.value)
                 )
-                .foregroundStyle(chartColor())
+                .foregroundStyle(coinPriceToColor())
                 .annotation(position: annotationPosition(for: element)) {
                     Text(formatePrice(element.value as NSNumber))
                         .font(.system(size: 10, weight: .bold))
                 }
             }
         }
+        .clipped()
         .chartXAxis {
             AxisMarks(preset: .extended) {
                 let value = $0.as(TimeInterval.self) ?? 0.0
@@ -56,7 +70,7 @@ struct CoinTopView: View {
         .chartYAxis {
             AxisMarks(position: .leading) {
                 let value = $0.as(Double.self) ?? 0.0
-                AxisGridLine(stroke: StrokeStyle(dash: [0, 2, 4]))
+                AxisGridLine()
                 AxisValueLabel {
                     Text(value.shortStringRepresentation)
                 }
@@ -69,30 +83,147 @@ struct CoinTopView: View {
                     .gesture(DragGesture()
                         .onChanged { value in
                             updateSelectedValue(at: value.location,
-                                               proxy: proxy,
-                                               geometry: geometry)
+                                                proxy: proxy,
+                                                geometry: geometry)
                         }
                     )
                     .onTapGesture { location in
                         updateSelectedValue(at: location,
-                                           proxy: proxy,
-                                           geometry: geometry)
+                                            proxy: proxy,
+                                            geometry: geometry)
                     }
+            }
+        }
+    }
+    
+    var coinShortInfo: some View {
+        HStack(spacing: 2) {
+            KFImage(coin.image.large)
+                .resizable()
+                .frame(width: 32, height: 32)
+                .aspectRatio(contentMode: .fit)
+                .padding(.trailing, 8)
+            Text(coin.name.capitalized)
+            Text("•")
+                .opacity(0.4)
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+            Text("USDT")
+        }
+        .font(.system(size: 20, weight: .semibold, design: .rounded))
+    }
+    
+    var coinPrice: some View {
+        HStack {
+            Text(formatePrice(coin.market_data.current_price.usd as NSNumber, digits: 2))
+            Text("USDT")
+        }
+        .foregroundColor(coinPriceToColor())
+        .font(.system(size: 20, weight: .bold))
+    }
+    
+    var coinVolume: some View {
+        HStack {
+            Image(systemName: didPriceGoUp() ? "arrow.up.right" : "arrow.down.right")
+            Text(formatePrice((didPriceGoUp() ? maxChart() : minChart()) as NSNumber, digits: 2))
+            Text("Vol. 24h")
+        }
+        .font(.system(size: 12, weight: .medium, design: .rounded))
+    }
+    
+    var actionButtons: some View {
+        HStack(spacing: 12) {
+            Button {
+                
+            } label: {
+                Text("Favourite")
+            }
+            .frame(minWidth: 0, maxWidth: .infinity)
+            .frame(height: UIScreen.main.bounds.width * 0.0914)
+            .background(Color.gray.opacity(0.3))
+            
+            Button {
+                
+            } label: {
+                Text("Notification")
+            }
+            .frame(minWidth: 0, maxWidth: .infinity)
+            .frame(height: UIScreen.main.bounds.width * 0.0914)
+            .background(Color.gray.opacity(0.3))
+            
+            Button {
+                
+            } label: {
+                Text("Add to portfolio")
+            }
+            .frame(minWidth: 0, maxWidth: .infinity)
+            .frame(height: UIScreen.main.bounds.width * 0.0914)
+            .background(Color.gray.opacity(0.3))
+        }
+    }
+    
+    var pricesInfo: some View {
+        VStack {
+            HStack {
+                Text("Domin.")
+                Spacer()
+                Text("XX.XX%")
+            }
+            HStack {
+                Text("Low")
+                Spacer()
+                Text(formatePrice(minChart() as NSNumber, digits:2))
+            }
+            HStack {
+                Text("High")
+                Spacer()
+                Text(formatePrice(maxChart() as NSNumber, digits:2))
+            }
+        }
+        .font(.system(size: 14, weight: .semibold, design: .rounded))
+    }
+    
+    var timeframe: some View {
+        Picker("Timeframe", selection: $selectedTimeframe) {
+            ForEach(Timeframe.allCases, id: \.rawValue) { frame in
+                Text(frame.rawValue)
+                    .tag(frame)
+            }
+        }
+        .pickerStyle(.segmented)
+    }
+    
+    var coinInfo: some View {
+        VStack {
+            HStack(spacing: UIScreen.main.bounds.width * 0.0256) {
+                VStack(alignment: .leading) {
+                    coinShortInfo
+                    coinPrice
+                    coinVolume
+                    Spacer()
+                }
+                .layoutPriority(1)
+                Spacer()
+                VStack(alignment: .trailing) {
+                    actionButtons
+                    pricesInfo
+                    Spacer()
+                        .frame(height: 0)
+                }
             }
         }
     }
     
     var body: some View {
         VStack {
-            HStack {
-                Text(formatePrice(coin.market_data.current_price.usd as NSNumber, digits: 2))
-                    .font(.system(size: 24, weight: .bold))
-                
-                Spacer()
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color("cell_color_primary"))
+                coinInfo
+                    .padding()
             }
-            
+            timeframe
             chart
-                .frame(height: 200)
+                .frame(height: 275)
         }
     }
 }
@@ -100,7 +231,7 @@ struct CoinTopView: View {
 extension CoinTopView {
     private var areaGradient: Gradient {
         Gradient(stops: [
-            Gradient.Stop(color: chartColor().opacity(0.3), location: 0),
+            Gradient.Stop(color: coinPriceToColor().opacity(0.3), location: 0),
             Gradient.Stop(color: .clear, location: 0.075),
         ])
     }
@@ -150,9 +281,13 @@ extension CoinTopView {
         return .top
     }
     
-    internal func chartColor() -> Color {
-        if coin.market_data.price_change_percentage_24h.isLess(than: 0) { return Color.red }
-        return Color.green
+    internal func coinPriceToColor() -> Color {
+        if coin.market_data.price_change_percentage_24h.isLess(than: 0) { return Color("red") }
+        return Color("green")
+    }
+    
+    internal func didPriceGoUp() -> Bool {
+        !coin.market_data.price_change_percentage_24h.isLess(than: 0)
     }
     
     internal func formatePrice(_ price: NSNumber, digits: Int = 0) -> String {
